@@ -1,10 +1,10 @@
 # شجرة آل عثمان بحيري — Family Tree App
 
-Full-stack Arabic / RTL family tree viewer & editor.
+Full-stack Arabic / RTL family tree viewer & editor for my family tree. I'm keeping this open source in case anyone from the family wants to add to this application. Checkout the issues attached to this repo.
 
 - **Frontend** — React + TypeScript + Vite, built into a static `dist/` bundle.
 - **Backend** — Node.js + Express, serves both `/api/*` and the static frontend.
-- **Database** — Redis (with `appendonly` + `save` so data survives restarts).
+- **Database** — Redis (with `appendonly` + `save` so it's not ephemral).
 - **Container** — single Docker image runs Express + Redis side-by-side via `supervisord`.
 
 The whole stack ships in **one container** and listens on **port 3001**.
@@ -79,51 +79,4 @@ npm install
 npm run dev      # http://localhost:5173 (proxies /api → :3001)
 ```
 
----
 
-## API
-
-All mutations require `password` in the JSON body (or `x-admin-password` header).
-
-| Method   | Path             | Auth | Body                                    |
-| -------- | ---------------- | :--: | --------------------------------------- |
-| `GET`    | `/api/nodes`     |  ❌   | —                                       |
-| `POST`   | `/api/nodes`     |  ✅   | `FamilyNode` (without `id`) + password  |
-| `PUT`    | `/api/nodes/:id` |  ✅   | partial `FamilyNode` + password         |
-| `DELETE` | `/api/nodes/:id` |  ✅   | `{ password }` — also deletes descendants |
-
-Response envelope:
-
-- success → `{ "success": true, "data": <result> }`
-- error   → `{ "error": "<arabic message>" }` with appropriate HTTP status
-
----
-
-## Project layout
-
-```
-family-tree/
-├── client/                   # Vite + React + TS frontend
-│   ├── src/
-│   │   ├── components/       # TreeCanvas, TreeNode, Connectors, Minimap, SearchBar, EditDrawer, DeleteModal, PasswordPrompt
-│   │   ├── hooks/            # useTreeLayout, usePanZoom, useLineage
-│   │   ├── api.ts
-│   │   ├── types.ts
-│   │   ├── styles.css
-│   │   ├── main.tsx
-│   │   └── App.tsx
-│   ├── index.html
-│   ├── vite.config.ts
-│   ├── tsconfig.json
-│   └── package.json
-├── server/                   # Express server
-│   ├── index.js              # routes + auth + SPA fallback
-│   ├── redis.js              # client + seed-on-first-boot
-│   ├── seed.js               # initial fixture (~125 nodes)
-│   └── package.json
-├── redis.conf                # appendonly + save policy
-├── supervisord.conf          # runs redis-server and node side-by-side
-├── Dockerfile                # multi-stage: vite build → server deps → alpine runtime
-├── docker-compose.yml
-└── README.md
-```
