@@ -1,0 +1,14 @@
+{
+  "name": "family-tree-server",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.1",
+    "redis": "^4.7.0"
+  }
+}

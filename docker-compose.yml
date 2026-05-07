@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    image: family-tree:latest
+    container_name: family-tree
+    ports:
+      - "3001:3001"
+    environment:
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-family123}
+      PORT: "3001"
+      REDIS_URL: "redis://127.0.0.1:6379"
+      STATIC_DIR: "/app/dist"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+volumes:
+  redis-data:

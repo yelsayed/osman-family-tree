@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/.vite
+**/.cache
+**/.git
+**/.gitignore
+**/.DS_Store
+**/npm-debug.log*
+**/.env
+**/.env.local
+**/.env.*.local
+README.md
+SPEC.md
+Family Tree.html
