@@ -2,6 +2,11 @@
 
 Full-stack Arabic / RTL family tree viewer & editor for my family tree. I'm keeping this open source in case anyone from the family wants to add to this application. Checkout the issues attached to this repo.
 
+<img width="1390" height="999" alt="Screenshot 2026-05-07 at 9 38 30 AM" src="https://github.com/user-attachments/assets/0fe767c9-98d8-4d62-82cf-74e2905ab16c" />
+
+
+## Structure at a glance
+
 - **Frontend** — React + TypeScript + Vite, built into a static `dist/` bundle.
 - **Backend** — Node.js + Express, serves both `/api/*` and the static frontend.
 - **Database** — Redis (with `appendonly` + `save` so it's not ephemral).
