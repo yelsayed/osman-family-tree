@@ -64,3 +64,30 @@ export async function deleteNode(id: number, password: string): Promise<number[]
   }
   return json.deleted as number[];
 }
+
+export async function uploadPhoto(
+  id: number,
+  file: File,
+  password: string,
+): Promise<FamilyNode> {
+  const fd = new FormData();
+  fd.append('photo', file);
+  // The auth check is also accepted as `x-admin-password`, but including the
+  // password in the form body keeps the call working in environments where
+  // custom headers get stripped (e.g. some HTML form replays).
+  fd.append('password', password);
+  const res = await fetch(`${BASE}/api/nodes/${id}/photo`, {
+    method: 'POST',
+    body: fd,
+  });
+  return handle<FamilyNode>(res);
+}
+
+export async function deletePhoto(id: number, password: string): Promise<FamilyNode> {
+  const res = await fetch(`${BASE}/api/nodes/${id}/photo`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  });
+  return handle<FamilyNode>(res);
+}

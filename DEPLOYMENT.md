@@ -1,6 +1,6 @@
 # Deployment Plan
 
-This document proposes a deployment design for issue [#3](https://github.com/yelsayed/osman-family-tree/issues/3). It does not implement [#1 Scheduled Backup](https://github.com/yelsayed/osman-family-tree/issues/1) or [#2 Profile pictures](https://github.com/yelsayed/osman-family-tree/issues/2), but it is shaped to support both without rework.
+This document proposes a deployment design for issue [#3](https://github.com/yelsayed/osman-family-tree/issues/3). It does not implement [#1 Scheduled Backup](https://github.com/yelsayed/osman-family-tree/issues/1); [#2 Profile pictures](https://github.com/yelsayed/osman-family-tree/issues/2) is now implemented (see `PROFILE_PICTURES_PLAN.md` and the "Media-storage seam" section below).
 
 ## Goals and constraints
 
@@ -193,11 +193,23 @@ These steps do not prevent malicious pull requests from being opened. They ensur
 - A future scheduled GH Actions workflow will SSH in, run `docker exec family-tree redis-cli BGSAVE`, tar the volume contents, and upload to S3.
 - This plan keeps that path clear. SSH access from CI is already in place, Redis is reachable via `docker exec`, and the volume name is stable.
 
-## Media-storage seam (for issue #2, not implemented here)
+## Media-storage seam (issue #2 — implemented)
 
-- Profile pictures will live in S3, not on the host.
-- The compose file pre-declares the four S3-related env vars. They are empty until #2 ships and the server ignores them.
-- When #2 is implemented, the only deployment change is to populate the secrets in GitHub and re-run the workflow.
+- Profile pictures use a pluggable backend. The selector lives in `server/storage.js`:
+  if `S3_BUCKET` and `S3_REGION` are both set the server writes to S3; otherwise it
+  writes to the local `MEDIA_DIR` (default `/data/media`) and serves the bytes
+  through `GET /api/photos/*` behind the existing Caddy proxy.
+- Local-backend bytes live on a named Docker volume (`media-data`) so they survive
+  container recreation. The volume is small (max upload 5 MB, server resizes to a
+  512×512 WebP) and is included in the existing 40 GB SSD budget.
+- **Production cutover:** populate `S3_BUCKET`, `S3_REGION`, `AWS_ACCESS_KEY_ID`,
+  `AWS_SECRET_ACCESS_KEY` in GitHub Secrets and re-run the deploy workflow. The
+  next process restart picks the S3 backend automatically — no code change. The
+  IAM scope listed below is exactly what the implementation needs.
+- The bucket should be configured to allow public reads under the `nodes/` prefix
+  (the tree itself is already public; signed URLs would just shift complexity
+  without changing the threat model). Switch to signed URLs in
+  `storage.publicUrl()` if access control is later added at the page level.
 
 ## Cost summary
 

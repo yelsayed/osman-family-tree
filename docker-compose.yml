@@ -10,9 +10,19 @@ services:
       PORT: "3001"
       REDIS_URL: "redis://127.0.0.1:6379"
       STATIC_DIR: "/app/dist"
+      MEDIA_DIR: "/data/media"
+      # Pre-declared so the production deploy can flip the storage backend
+      # without a code change. When unset, the server uses the local /data/media
+      # volume; when both S3_BUCKET and S3_REGION are set, it uses S3.
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_REGION: ${S3_REGION:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
     volumes:
       - redis-data:/data
+      - media-data:/data/media
     restart: unless-stopped
 
 volumes:
   redis-data:
+  media-data:

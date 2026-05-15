@@ -18,6 +18,7 @@ interface Props {
   selected: number | null;
   ancestorIds: Set<number>;
   setSelected: (id: number | null) => void;
+  onView: (id: number) => void;
   onEdit: (id: number) => void;
   onAdd: (parentId: number) => void;
   onDelete: (id: number) => void;
@@ -43,6 +44,7 @@ export default function TreeCanvas({
   selected,
   ancestorIds,
   setSelected,
+  onView,
   onEdit,
   onAdd,
   onDelete,
@@ -119,6 +121,7 @@ export default function TreeCanvas({
                 unlocked={unlocked}
                 onHover={setHovered}
                 onClick={(id) => setSelected(isSelected ? null : id)}
+                onView={onView}
                 onEdit={onEdit}
                 onAdd={onAdd}
                 onDelete={onDelete}
