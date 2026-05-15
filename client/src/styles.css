@@ -165,6 +165,120 @@ body {
 .field-input:focus, .field-textarea:focus { border-color: #c89636; background: #fff; }
 .field-textarea { resize: vertical; min-height: 80px; }
 
+/* Photo upload block (lives at the top of the edit drawer) */
+.photo-block {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f0e8d8;
+}
+.photo-preview {
+  position: relative;
+  width: 96px;
+  height: 96px;
+  flex: 0 0 96px;
+}
+.photo-preview .avatar { width: 96px; height: 96px; }
+.photo-preview.busy::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+}
+.photo-spinner {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 28px; height: 28px;
+  margin-left: -14px; margin-top: -14px;
+  border: 3px solid rgba(160, 116, 40, 0.25);
+  border-top-color: #a07428;
+  border-radius: 50%;
+  animation: photo-spin 0.7s linear infinite;
+  z-index: 2;
+}
+@keyframes photo-spin { to { transform: rotate(360deg); } }
+.photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+.photo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  padding: 7px 12px;
+  justify-content: center;
+}
+.photo-hint {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.4;
+}
+.photo-err {
+  color: #8b1a1a;
+  font-size: 12px;
+}
+
+/* Clickable avatars (used by the drawer preview) get a soft darken on hover.
+   The inner <img> needs `cursor: inherit` because it covers the parent span. */
+.avatar-clickable {
+  transition: filter 0.18s ease;
+}
+.avatar-clickable img {
+  cursor: inherit;
+}
+.avatar-clickable:hover {
+  filter: brightness(0.82);
+}
+.avatar-clickable:active {
+  filter: brightness(0.72);
+}
+
+/* Lightbox — full-bleed photo viewer launched from the drawer preview. */
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  cursor: zoom-out;
+  animation: lightbox-fade 0.15s ease-out;
+}
+@keyframes lightbox-fade { from { opacity: 0; } to { opacity: 1; } }
+.lightbox-image {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  cursor: default;
+  user-select: none;
+}
+.lightbox-close {
+  position: fixed;
+  top: 20px;
+  left: 20px; /* RTL: visual left */
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.lightbox-close:hover { background: rgba(255, 255, 255, 0.28); }
+
 /* Modal */
 .modal-backdrop {
   position: fixed; inset: 0;

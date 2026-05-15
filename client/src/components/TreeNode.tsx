@@ -1,8 +1,9 @@
 import type { CSSProperties } from 'react';
-import { ChevronDown, ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Info, Pencil, Plus, Trash2 } from 'lucide-react';
 import type { FamilyNode } from '../types';
 import { NODE_W, NODE_H, type NodePosition } from '../hooks/useTreeLayout';
 import { ageYears, formatRange, isDeceased as isDeceasedFn } from '../dateUtils';
+import Avatar from './Avatar';
 
 interface Props {
   node: FamilyNode;
@@ -17,6 +18,7 @@ interface Props {
   unlocked: boolean;
   onHover: (id: number | null) => void;
   onClick: (id: number) => void;
+  onView: (id: number) => void;
   onEdit: (id: number) => void;
   onAdd: (parentId: number) => void;
   onDelete: (id: number) => void;
@@ -36,6 +38,7 @@ export default function TreeNode({
   unlocked,
   onHover,
   onClick,
+  onView,
   onEdit,
   onAdd,
   onDelete,
@@ -75,8 +78,19 @@ export default function TreeNode({
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
     >
-      {isHovered && (unlocked || hasChildren) && (
+      {isHovered && (
         <div className="node-actions">
+          <button
+            className="action-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(node.id);
+            }}
+            title="عرض التفاصيل"
+          >
+            <Info size={14} />
+            <span className="label">تفاصيل</span>
+          </button>
           {unlocked && (
             <button
               className="action-btn"
@@ -132,47 +146,57 @@ export default function TreeNode({
         </div>
       )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-        <span
-          style={{
-            fontWeight: 700,
-            fontSize: 15,
-            color: isDeceased ? '#999' : '#1a1a1a',
-            lineHeight: 1.3,
-          }}
-        >
-          {node.name}
-        </span>
-      </div>
-      <div
-        style={{
-          fontSize: 12,
-          color: '#888',
-          display: 'flex',
-          gap: 6,
-          flexWrap: 'wrap',
-          alignItems: 'center',
-        }}
-      >
-        <span>{isFemale ? '♀ أنثى' : '♂ ذكر'}</span>
-        {age !== null && (
-          <>
-            <span>·</span>
-            <span>{age} سنة</span>
-          </>
-        )}
-        {isDeceased && (
-          <>
-            <span>·</span>
-            <span style={{ color: '#a07428', fontStyle: 'italic', fontSize: 11 }}>
-              رحمة الله
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+        <Avatar node={node} size={36} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ marginBottom: 2 }}>
+            <span
+              style={{
+                fontWeight: 700,
+                fontSize: 15,
+                color: isDeceased ? '#999' : '#1a1a1a',
+                lineHeight: 1.3,
+                display: 'block',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+              title={node.name}
+            >
+              {node.name}
             </span>
-          </>
-        )}
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: '#888',
+              display: 'flex',
+              gap: 6,
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
+            <span>{isFemale ? '♀ أنثى' : '♂ ذكر'}</span>
+            {age !== null && (
+              <>
+                <span>·</span>
+                <span>{age} سنة</span>
+              </>
+            )}
+            {isDeceased && (
+              <>
+                <span>·</span>
+                <span style={{ color: '#a07428', fontStyle: 'italic', fontSize: 11 }}>
+                  رحمة الله
+                </span>
+              </>
+            )}
+          </div>
+          {range && (
+            <div style={{ fontSize: 11, color: '#7a5030', marginTop: 2 }}>{range}</div>
+          )}
+        </div>
       </div>
-      {range && (
-        <div style={{ fontSize: 11, color: '#7a5030', marginTop: 2 }}>{range}</div>
-      )}
 
       {isCollapsed && (
         <div

@@ -14,6 +14,8 @@ import {
   updateNode,
   deleteNode,
   verifyPassword,
+  uploadPhoto,
+  deletePhoto,
 } from './api';
 import { toIsoDate } from './dateUtils';
 import {
@@ -27,14 +29,17 @@ import { usePanZoom } from './hooks/usePanZoom';
 import TreeCanvas from './components/TreeCanvas';
 import Minimap from './components/Minimap';
 import SearchBar from './components/SearchBar';
-import EditDrawer from './components/EditDrawer';
+import DetailsDrawer from './components/DetailsDrawer';
 import DeleteModal from './components/DeleteModal';
 import UnlockModal from './components/UnlockModal';
 import StatsPanel from './components/StatsPanel';
 
 type DrawerState =
   | { open: false }
-  | { open: true; mode: 'edit'; nodeId: number }
+  | { open: true; mode: 'view'; nodeId: number }
+  // `returnToView` is true when the user got into edit mode via View → Edit.
+  // Cancel from edit then pops back to the view, instead of closing the drawer.
+  | { open: true; mode: 'edit'; nodeId: number; returnToView: boolean }
   | { open: true; mode: 'add'; parentId: number };
 
 const emptyForm: NodeFormState = {
@@ -178,9 +183,13 @@ export default function App() {
 
   const lock = useCallback(() => {
     setSessionPassword(null);
-    // Close any open mutation UI when locking
-    setDrawer({ open: false });
     setDelTarget(null);
+    // Locking should not kick the user out of a read-only view. Close any
+    // mutation UI (edit / add), but keep view drawers open.
+    setDrawer((prev) => {
+      if (prev.open && prev.mode === 'view') return prev;
+      return { open: false };
+    });
     setToast('تم قفل الشجرة');
   }, []);
 
@@ -231,26 +240,68 @@ export default function App() {
     [wasDragged],
   );
 
-  // ── Mutation actions (only enabled when unlocked) ──────────
+  // ── Drawer actions ────────────────────────────────────────────
+
+  /** Read-only view — available to everyone, locked or not. */
+  const openView = useCallback(
+    (id: number) => {
+      if (!nodes.some((n) => n.id === id)) return;
+      setDrawerErr('');
+      setDrawerBusy(false);
+      setDrawer({ open: true, mode: 'view', nodeId: id });
+    },
+    [nodes],
+  );
+
+  const seedFormFromNode = useCallback((n: FamilyNode) => {
+    setForm({
+      name: n.name,
+      sex: n.sex,
+      born: toIsoDate(n.born),
+      died: toIsoDate(n.died),
+      bio: n.bio,
+      email: n.email,
+    });
+  }, []);
+
+  /** Direct edit (admin pencil action on the node). Cancel closes the drawer. */
   const openEdit = useCallback(
     (id: number) => {
       if (!unlocked) return;
       const n = nodes.find((x) => x.id === id);
       if (!n) return;
-      setForm({
-        name: n.name,
-        sex: n.sex,
-        born: toIsoDate(n.born),
-        died: toIsoDate(n.died),
-        bio: n.bio,
-        email: n.email,
-      });
+      seedFormFromNode(n);
       setDrawerErr('');
       setDrawerBusy(false);
-      setDrawer({ open: true, mode: 'edit', nodeId: id });
+      setDrawer({ open: true, mode: 'edit', nodeId: id, returnToView: false });
     },
-    [nodes, unlocked],
+    [nodes, unlocked, seedFormFromNode],
   );
+
+  /** From inside the view drawer, switch into edit mode. Cancel pops back to view. */
+  const enterEditFromView = useCallback(() => {
+    if (!unlocked) return;
+    if (!drawer.open || drawer.mode !== 'view') return;
+    const n = nodes.find((x) => x.id === drawer.nodeId);
+    if (!n) return;
+    seedFormFromNode(n);
+    setDrawerErr('');
+    setDrawerBusy(false);
+    setDrawer({ open: true, mode: 'edit', nodeId: drawer.nodeId, returnToView: true });
+  }, [drawer, nodes, unlocked, seedFormFromNode]);
+
+  /** Cancel button in edit mode. Pops back to view when applicable. */
+  const cancelEdit = useCallback(() => {
+    if (drawer.open && drawer.mode === 'edit' && drawer.returnToView) {
+      setDrawer({ open: true, mode: 'view', nodeId: drawer.nodeId });
+      setDrawerErr('');
+      setDrawerBusy(false);
+    } else {
+      setDrawer({ open: false });
+      setDrawerErr('');
+      setDrawerBusy(false);
+    }
+  }, [drawer]);
 
   const openAdd = useCallback(
     (parentId: number) => {
@@ -292,7 +343,16 @@ export default function App() {
         });
         setNodes((prev) => prev.map((n) => (n.id === drawer.nodeId ? updated : n)));
         setToast('تم حفظ التعديلات');
-      } else {
+        // If we entered edit from view, return to view so the user sees the
+        // freshly-saved record rather than losing context.
+        if (drawer.returnToView) {
+          setDrawer({ open: true, mode: 'view', nodeId: drawer.nodeId });
+          setDrawerErr('');
+          setDrawerBusy(false);
+        } else {
+          closeDrawer();
+        }
+      } else if (drawer.mode === 'add') {
         const created = await createNode({
           password: sessionPassword,
           parentId: drawer.parentId,
@@ -305,8 +365,8 @@ export default function App() {
         });
         setNodes((prev) => [...prev, created]);
         setToast('تمت الإضافة');
+        closeDrawer();
       }
-      closeDrawer();
     } catch (e: any) {
       const msg = e.message ?? 'حدث خطأ';
       setDrawerErr(msg);
@@ -315,6 +375,41 @@ export default function App() {
       setDrawerBusy(false);
     }
   }, [drawer, form, sessionPassword]);
+
+  const handleUploadPhoto = useCallback(
+    async (file: File) => {
+      if (!drawer.open || drawer.mode !== 'edit') {
+        throw new Error('لا يمكن الرفع الآن');
+      }
+      if (!sessionPassword) {
+        throw new Error('الجلسة مقفلة. أعد فتح القفل.');
+      }
+      const updated = await uploadPhoto(drawer.nodeId, file, sessionPassword);
+      setNodes((prev) => prev.map((n) => (n.id === drawer.nodeId ? updated : n)));
+      setToast('تم تحديث الصورة');
+      return updated;
+    },
+    [drawer, sessionPassword],
+  );
+
+  const handleDeletePhoto = useCallback(async () => {
+    if (!drawer.open || drawer.mode !== 'edit') {
+      throw new Error('لا يمكن الحذف الآن');
+    }
+    if (!sessionPassword) {
+      throw new Error('الجلسة مقفلة. أعد فتح القفل.');
+    }
+    const updated = await deletePhoto(drawer.nodeId, sessionPassword);
+    setNodes((prev) => prev.map((n) => (n.id === drawer.nodeId ? updated : n)));
+    setToast('تم حذف الصورة');
+    return updated;
+  }, [drawer, sessionPassword]);
+
+  const drawerNode = useMemo(() => {
+    if (!drawer.open) return null;
+    if (drawer.mode === 'add') return null;
+    return nodes.find((n) => n.id === drawer.nodeId) ?? null;
+  }, [drawer, nodes]);
 
   const toggleCollapse = useCallback((id: number) => {
     setCollapsed((prev) => {
@@ -447,6 +542,7 @@ export default function App() {
         selected={selected}
         ancestorIds={ancestorIds}
         setSelected={setSelected}
+        onView={openView}
         onEdit={openEdit}
         onAdd={openAdd}
         onDelete={openDelete}
@@ -477,12 +573,18 @@ export default function App() {
       </div>
 
       {drawer.open && (
-        <EditDrawer
+        <DetailsDrawer
           mode={drawer.mode}
+          node={drawerNode}
+          unlocked={unlocked}
           form={form}
           setForm={setForm}
           onSave={saveDrawer}
           onClose={closeDrawer}
+          onEnterEdit={enterEditFromView}
+          onCancelEdit={cancelEdit}
+          onUploadPhoto={handleUploadPhoto}
+          onDeletePhoto={handleDeletePhoto}
           error={drawerErr}
           busy={drawerBusy}
         />

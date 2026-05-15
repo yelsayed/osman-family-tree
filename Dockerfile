@@ -24,9 +24,10 @@ RUN npm install --omit=dev --no-audit --no-fund
 # ─── Stage 3: runtime — Node + Redis + supervisord in a single Alpine image ─
 FROM node:20-alpine AS runtime
 
-# redis-server, supervisord, and tini (PID 1) for clean signal handling
-RUN apk add --no-cache redis supervisor tini \
- && mkdir -p /data /etc/redis /app/server /app/dist /run
+# redis-server, supervisord, and tini (PID 1) for clean signal handling.
+# vips is the native dep behind `sharp` (used to resize/transcode profile pictures).
+RUN apk add --no-cache redis supervisor tini vips \
+ && mkdir -p /data /data/media /etc/redis /app/server /app/dist /run
 
 # Copy server runtime
 COPY server/ /app/server/
@@ -43,6 +44,7 @@ ENV NODE_ENV=production \
     PORT=3001 \
     REDIS_URL=redis://127.0.0.1:6379 \
     STATIC_DIR=/app/dist \
+    MEDIA_DIR=/data/media \
     ADMIN_PASSWORD=family123
 
 EXPOSE 3001
